@@ -1,11 +1,8 @@
-services:
-  - type: worker
-    name: Telegram-YT-BOT
-    env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "python main.py"
-    envVars:
-      - key: BOT_TOKEN
-        sync: false
-      - key: COOKIES
-        sync: false
+type: worker
+name: youtube-bot
+envVars:
+  - key: TOKEN
+    sync: false
+  - key: COOKIES
+    sync: false
+startCommand: python main.py
