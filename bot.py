@@ -1,6 +1,7 @@
 import os
 import telebot
 from yt_dlp import YoutubeDL
+import time
 
 TOKEN = os.getenv("TOKEN")
 bot = telebot.TeleBot(TOKEN)
@@ -17,16 +18,22 @@ def download_video(message):
         try:
             options = {
                 'format': 'mp4',
-                'outtmpl': 'video.%(ext)s',
+                'outtmpl': 'video.mp4',  # Corregido para que siempre sea .mp4
             }
             with YoutubeDL(options) as ydl:
                 ydl.download([url])
             video = open('video.mp4', 'rb')
             bot.send_video(message.chat.id, video)
             video.close()
+            os.remove("video.mp4")  # Limpia los videos después de enviarlos
         except Exception as e:
             bot.send_message(message.chat.id, f"❌ Error al descargar: {str(e)}")
     else:
         bot.send_message(message.chat.id, "⚠️ Eso no parece un enlace de YouTube.")
 
-bot.polling()
+while True:
+    try:
+        bot.polling(non_stop=True)
+    except Exception as e:
+        print(f"Error: {e}")
+        time.sleep(5)
