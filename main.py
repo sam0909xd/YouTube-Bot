@@ -31,19 +31,18 @@ async def descargar(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ydl_opts = {
             'outtmpl': '%(title)s.%(ext)s',
             'format': 'best',
-            'cookiefile': 'cookies.txt',  # Aquí le pasamos el archivo de cookies
+            'cookiefile': 'cookies.txt',  
         }
         with YoutubeDL(ydl_opts) as ydl:
-            ydl.download([link])
-
-        video_title = ydl.extract_info(link, download=False)['title']
-        video_file = f"{video_title}.mp4"
+            info = ydl.extract_info(link, download=True)
+            video_title = info['title']
+            video_file = f"{video_title}.mp4"
 
         with open(video_file, "rb") as video:
             await update.message.reply_video(video)
+            video.close()
 
-        os.remove(video_file)
-        os.remove("cookies.txt")
+        await update.message.reply_text("✅ Aquí está tu video papu 🎥")
 
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {str(e)}")
