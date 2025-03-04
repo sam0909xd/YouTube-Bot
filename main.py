@@ -1,53 +1,65 @@
 import os
 import logging
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from yt_dlp import YoutubeDL
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configurar logs
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
 
-async def start(update: Update, context):
-    await update.message.reply_text("🔌 BOT ACTIVO PAPU 🔥\nManda tu link de YouTube")
+# Token del bot
+TOKEN = os.getenv("TOKEN")
 
-async def download_video(update: Update, context):
-    url = update.message.text
-    cookies = os.getenv("COOKIES")  # 🔑 Llamamos las cookies desde Render
+# Crear cookies desde Environment Variables
+def crear_cookie():
+    cookies = os.getenv("COOKIES")
+    if cookies:
+        with open("cookies.txt", "w") as f:
+            f.write(cookies)
+        logging.info("✅ Cookies creadas exitosamente")
 
-    if not cookies:
-        await update.message.reply_text("❌ No hay cookies configuradas")
-        return
-
-    with open("cookies.txt", "w") as f:
-        f.write(cookies)
-
+# Descargar video de YouTube
+async def descargar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    link = update.message.text
     await update.message.reply_text("🎥 Descargando tu video, espera un toque papu...")
 
-    ydl_opts = {
-        'outtmpl': '%(title)s.%(ext)s',
-        'format': 'best',
-        'cookies': 'cookies.txt'
-    }
-
     try:
+        crear_cookie()
+        ydl_opts = {
+            'outtmpl': '%(title)s.%(ext)s',
+            'format': 'best',
+            'cookiefile': 'cookies.txt',  # Aquí le pasamos el archivo de cookies
+        }
         with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-            await update.message.reply_document(document=open(filename, 'rb'))
+            ydl.download([link])
+
+        video_title = ydl.extract_info(link, download=False)['title']
+        video_file = f"{video_title}.mp4"
+
+        with open(video_file, "rb") as video:
+            await update.message.reply_video(video)
+
+        os.remove(video_file)
+        os.remove("cookies.txt")
+
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {str(e)}")
-    finally:
-        if os.path.exists("cookies.txt"):
-            os.remove("cookies.txt")
+        logging.error(f"Error al descargar: {e}")
 
+# Comando /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("👋 Hola papu! Envíame un link de YouTube y te lo descargo gratis 😏.")
+
+# Función principal
 def main():
-    TOKEN = os.getenv("BOT_TOKEN")
     app = Application.builder().token(TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, descargar))
 
-    logger.info("Bot corriendo papu 🔥")
+    logging.info("Bot corriendo papu 🔥")
     app.run_polling()
 
 if __name__ == "__main__":
